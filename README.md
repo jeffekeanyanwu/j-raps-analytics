@@ -18,18 +18,23 @@ A real-time analytics dashboard for Toronto Raptors using NBA API, featuring liv
 - Plotly
 
 ## Setup and Installation
-1. Clone the repository:
+
+### 1. Clone the repository
 ```bash
 git clone https://github.com/YOUR_USERNAME/REPO_NAME.git
 cd REPO_NAME
-	2.	Create a virtual environment and install dependencies:
-
+```
+### 2. Create a virtual environment and install dependencies
+```bash
 make setup
-	3.	Run the dashboard:
-
+```
+### 3. Run the dashboard
+```bash
 make dev
-Project Structure
+```
 
+### Project Structure:
+```bash
 raptors-analytics/
 ├── src/
 │   ├── config/
@@ -45,50 +50,17 @@ raptors-analytics/
 ├── Dockerfile
 ├── Makefile
 └── requirements.txt
-Usage
+```
+
+### Usage:
 The dashboard provides:
-	•	Real-time game statistics
-	•	Player performance metrics
-	•	Team analytics
-	•	ML-based predictions for upcoming games
-Development
-	•	Uses Docker for containerization
-	•	Makefile for common operations
-	•	Polars for efficient data processing
-	•	Streamlit for interactive dashboard
+- Real-time game statistics
+- Player performance metrics
+- Team analytics
+- ML based predictions for upcoming games
 
-
-6. Add and commit the README:
-```bash
-git add README.md
-git commit -m "Add README documentation"
-git push
-Optional but recommended:
-	7.	Add a license file (e.g., MIT License):
-
-# Create LICENSE file (MIT License example)
-echo "MIT License
-
-Copyright (c) 2023 YOUR_NAME
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE." > LICENSE
-
-git add LICENSE
-git commit -m "Add MIT License"
-git push
+### Development:
+- Uses Docker for containerization
+- Makefile for common operations
+- Polars for efficient data processing
+- Streamlit for interactive dashboard
