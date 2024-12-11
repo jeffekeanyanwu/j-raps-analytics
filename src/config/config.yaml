@@ -1,0 +1,37 @@
+api:
+  nba:
+    delay: 1.5  # Rate limiting delay in seconds
+    team_id: "1610612761"  # Toronto Raptors ID
+    endpoints:
+      base_url: "https://stats.nba.com/stats/"
+      timeout: 30
+
+dashboard:
+  refresh_rate: 30  # Auto-refresh rate in seconds
+  default_season: "2023-24"
+  charts:
+    colors:
+      primary: "#CE1141"  # Raptors red
+      secondary: "#000000"  # Raptors black
+      accent: "#A1A1A4"  # Raptors silver
+
+ml:
+  model:
+    update_frequency: 86400  # 24 hours in seconds
+    features:
+      - pts_ma_5
+      - fg_pct_ma_5
+      - fg3_pct_ma_5
+      - reb_ma_5
+      - ast_ma_5
+    window_sizes:
+      short: 5
+      medium: 10
+      long: 20
+    training:
+      test_size: 0.2
+      random_state: 42
+
+paths:
+  models: "models"  # Directory for saved models
+  data: "data"     # Directory for cached data
