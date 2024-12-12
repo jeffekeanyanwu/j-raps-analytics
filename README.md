@@ -26,7 +26,7 @@ cd REPO_NAME
 ```
 ### 2. Create a virtual environment and install dependencies
 ```bash
-make setup
+make run-all
 ```
 ### 3. Run the dashboard
 ```bash
