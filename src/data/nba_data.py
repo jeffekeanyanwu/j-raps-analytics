@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 
 from src.utils.config import Config
+from src.utils.cache import cache_decorator, RedisCache
 
 
 class RaptorsDataManager:
@@ -14,20 +15,16 @@ class RaptorsDataManager:
         self.config = Config()
         self.team_id = self.config.team_id
         self.api_delay = self.config.nba_delay
-        self._cache = {}
 
     def _rate_limit(self):
         """Implement rate limiting for API calls"""
         time.sleep(self.api_delay)
 
+    @cache_decorator(expire_in=300)  # Cache for 5 minutes
     def get_team_games(self, season: str = None) -> pl.DataFrame:
         """Fetch team game logs for the specified season"""
         if season is None:
             season = self.config.default_season
-
-        cache_key = f"team_games_{season}"
-        if cache_key in self._cache:
-            return self._cache[cache_key]
 
         self._rate_limit()
         game_log = teamgamelog.TeamGameLog(
@@ -37,22 +34,20 @@ class RaptorsDataManager:
 
         # Convert to Polars and process
         df = pl.from_pandas(game_log.get_data_frames()[0])
-        df = (df
-              .with_columns([
-            # Convert "APR 14, 2024" format to date
-            pl.col("GAME_DATE").str.strptime(pl.Date, "%b %d, %Y", strict=False),
-            pl.col("PTS").cast(pl.Int32),
-            pl.col("FG_PCT").cast(pl.Float32),
-            pl.col("FG3_PCT").cast(pl.Float32),
-            pl.col("REB").cast(pl.Int32),
-            pl.col("AST").cast(pl.Int32)
-        ])
-              .sort("GAME_DATE", descending=True)
-              )
+        return (df
+                .with_columns([
+                    # Convert "APR 14, 2024" format to date
+                    pl.col("GAME_DATE").str.strptime(pl.Date, "%b %d, %Y", strict=False),
+                    pl.col("PTS").cast(pl.Int32),
+                    pl.col("FG_PCT").cast(pl.Float32),
+                    pl.col("FG3_PCT").cast(pl.Float32),
+                    pl.col("REB").cast(pl.Int32),
+                    pl.col("AST").cast(pl.Int32)
+                ])
+                .sort("GAME_DATE", descending=True)
+                )
 
-        self._cache[cache_key] = df
-        return df
-
+    @cache_decorator(expire_in=60)  # Cache for 1 minute
     def get_live_game_stats(self) -> pl.DataFrame:
         """Fetch live game stats if a game is in progress"""
         self._rate_limit()
@@ -85,14 +80,11 @@ class RaptorsDataManager:
             print(f"Error fetching live game stats: {e}")
             return None
 
+    @cache_decorator(expire_in=3600)  # Cache for 1 hour
     def get_player_stats(self, season: str = None) -> pl.DataFrame:
         """Fetch and process player stats for the current roster"""
         if season is None:
             season = self.config.default_season
-
-        cache_key = f"player_stats_{season}"
-        if cache_key in self._cache:
-            return self._cache[cache_key]
 
         # Get current roster
         self._rate_limit()
@@ -131,39 +123,36 @@ class RaptorsDataManager:
                 combined_stats = pl.concat(player_stats)
 
                 # Process and clean the data
-                processed_stats = (combined_stats
-                                   .with_columns([
-                    # Handle date separately
-                    pl.col("GAME_DATE").str.strptime(pl.Date, "%b %d, %Y", strict=False),
-                    # Handle percentages
-                    pl.col("FG_PCT").cast(pl.Float32),
-                    pl.col("FG3_PCT").cast(pl.Float32),
-                    pl.col("FT_PCT").cast(pl.Float32),
-                    # Handle numeric columns
-                    pl.col("PTS").cast(pl.Int32),
-                    pl.col("REB").cast(pl.Int32),
-                    pl.col("AST").cast(pl.Int32),
-                    pl.col("STL").cast(pl.Int32),
-                    pl.col("BLK").cast(pl.Int32),
-                    pl.col("TOV").cast(pl.Int32),
-                    pl.col("PF").cast(pl.Int32)
-                ])
-                                   .select([
-                    "PLAYER_NAME",
-                    "GAME_DATE",
-                    "PTS",
-                    "REB",
-                    "AST",
-                    "FG_PCT",
-                    "STL",
-                    "BLK",
-                    "TOV"
-                ])
-                                   .sort(["PLAYER_NAME", "GAME_DATE"], descending=[False, True])
-                                   )
-
-                self._cache[cache_key] = processed_stats
-                return processed_stats
+                return (combined_stats
+                        .with_columns([
+                            # Handle date separately
+                            pl.col("GAME_DATE").str.strptime(pl.Date, "%b %d, %Y", strict=False),
+                            # Handle percentages
+                            pl.col("FG_PCT").cast(pl.Float32),
+                            pl.col("FG3_PCT").cast(pl.Float32),
+                            pl.col("FT_PCT").cast(pl.Float32),
+                            # Handle numeric columns
+                            pl.col("PTS").cast(pl.Int32),
+                            pl.col("REB").cast(pl.Int32),
+                            pl.col("AST").cast(pl.Int32),
+                            pl.col("STL").cast(pl.Int32),
+                            pl.col("BLK").cast(pl.Int32),
+                            pl.col("TOV").cast(pl.Int32),
+                            pl.col("PF").cast(pl.Int32)
+                        ])
+                        .select([
+                            "PLAYER_NAME",
+                            "GAME_DATE",
+                            "PTS",
+                            "REB",
+                            "AST",
+                            "FG_PCT",
+                            "STL",
+                            "BLK",
+                            "TOV"
+                        ])
+                        .sort(["PLAYER_NAME", "GAME_DATE"], descending=[False, True])
+                        )
 
             except Exception as e:
                 print(f"Error processing player stats: {e}")
@@ -171,5 +160,6 @@ class RaptorsDataManager:
         return None
 
     def clear_cache(self):
-        """Clear the data cache"""
-        self._cache.clear()
+        """Clear the Redis cache"""
+        cache = RedisCache()
+        cache.redis.flushall()
