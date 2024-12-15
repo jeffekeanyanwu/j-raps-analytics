@@ -79,6 +79,88 @@ def create_team_stats_chart(df: pl.DataFrame, season: str = None) -> go.Figure:
     return fig
 
 
+def create_win_loss_pie_chart(games_df: pl.DataFrame) -> go.Figure:
+    """Create a pie chart for win-loss ratio"""
+    if games_df is None:
+        return None
+
+    win_loss_counts = games_df.group_by("WL").count()
+
+    fig = go.Figure(data=[go.Pie(labels=win_loss_counts["WL"], values=win_loss_counts["count"])])
+    fig.update_layout(title="Win-Loss Ratio")
+
+    return fig
+
+
+def create_shooting_efficiency_heatmap(games_df: pl.DataFrame) -> go.Figure:
+    """Create a heatmap for shooting efficiency"""
+    if games_df is None:
+        return None
+
+    heatmap_data = games_df.select(["GAME_DATE", "FG_PCT", "FG3_PCT"]).to_pandas()
+
+    fig = px.imshow(
+        heatmap_data[["FG_PCT", "FG3_PCT"]].T,
+        labels=dict(x="Game", y="Metric", color="Percentage"),
+        x=heatmap_data["GAME_DATE"],
+        y=["FG%", "3P%"],
+        aspect="auto"
+    )
+    fig.update_layout(title="Shooting Efficiency Heatmap")
+
+    return fig
+
+
+def create_player_performance_radar(player_stats: pl.DataFrame, player_name: str) -> Optional[go.Figure]:
+    """Create a radar chart for player performance"""
+    player_data = player_stats.filter(pl.col("PLAYER_NAME") == player_name)
+
+    if player_data.is_empty():
+        return None
+
+    # Calculate average metrics
+    avg_metrics = (player_data
+    .group_by("PLAYER_NAME")
+    .agg([
+        pl.col("PTS").mean().round(1).alias("AVG_PTS"),
+        pl.col("REB").mean().round(1).alias("AVG_REB"),
+        pl.col("AST").mean().round(1).alias("AVG_AST"),
+        pl.col("FG_PCT").mean().round(3).alias("FG_PCT"),
+        pl.col("STL").mean().round(1).alias("AVG_STL"),
+        pl.col("BLK").mean().round(1).alias("AVG_BLK")
+    ])
+    )
+
+    metrics = {
+        "AVG_PTS": "Points",
+        "AVG_REB": "Rebounds",
+        "AVG_AST": "Assists",
+        "FG_PCT": "FG%",
+        "AVG_STL": "Steals",
+        "AVG_BLK": "Blocks"
+    }
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatterpolar(
+        r=[avg_metrics[metric][0] for metric in metrics.keys()],
+        theta=list(metrics.values()),
+        fill='toself',
+        name=player_name
+    ))
+
+    fig.update_layout(
+        polar=dict(
+            radialaxis=dict(
+                visible=True,
+                range=[0, max([avg_metrics[metric][0] for metric in metrics.keys()])]
+            )),
+        showlegend=True,
+        title=f"{player_name} Performance Radar"
+    )
+
+    return fig
+
+
 def display_live_game(data_manager: RaptorsDataManager):
     """Display live game information if available"""
     try:
@@ -264,9 +346,34 @@ def main():
             else:
                 st.info("No recent games to display.")
 
+            # Add Win-Loss Pie Chart
+            st.subheader("Win-Loss Ratio")
+            pie_chart = create_win_loss_pie_chart(games_df)
+            if pie_chart:
+                st.plotly_chart(pie_chart, use_container_width=True)
+
+            # Add Shooting Efficiency Heatmap
+            st.subheader("Shooting Efficiency")
+            heatmap = create_shooting_efficiency_heatmap(games_df)
+            if heatmap:
+                st.plotly_chart(heatmap, use_container_width=True)
+
     with tab3:
         st.subheader("Player Statistics")
-        display_player_stats(data_manager, season)
+
+        # Load player stats
+        player_stats = load_player_stats(data_manager, season)
+
+        if player_stats is not None:
+            display_player_stats(data_manager, season)
+
+            # Add Player Performance Radar Chart
+            player_name = st.selectbox("Select Player", player_stats["PLAYER_NAME"].unique())
+            radar_chart = create_player_performance_radar(player_stats, player_name)
+            if radar_chart:
+                st.plotly_chart(radar_chart, use_container_width=True)
+        else:
+            st.info("No player stats available.")
 
     # Auto-refresh logic
     if auto_refresh:
