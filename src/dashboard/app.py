@@ -4,7 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import time
-from typing import Optional, Dict, Any
+from typing import Optional
 
 from src.data.nba_data import RaptorsDataManager
 from src.models.predictor import RaptorsPredictor
@@ -113,7 +113,6 @@ def display_player_stats(data_manager: RaptorsDataManager, season: str = None):
         player_stats = load_player_stats(data_manager, season)
 
         if player_stats is not None:
-            # Calculate stats efficiently using Polars
             recent_stats = (player_stats
                             .lazy()
                             .group_by(["SEASON", "PLAYER_NAME"])
@@ -152,7 +151,7 @@ def display_cache_stats():
 
 def main():
     st.set_page_config(
-        page_title="Raptors Analytics Dashboard",
+        page_title="Toronto Raptors Analytics Dashboard",
         page_icon="🏀",
         layout="wide",
     )
@@ -169,11 +168,11 @@ def main():
         st.title("Dashboard Controls")
 
         # Season selector
-        season_options = ["All Seasons", "2024-25", "2023-24"]
+        season_options = ["2024-25", "All Seasons", "2023-24"]
         selected_season = st.selectbox(
             "Select Season",
             options=season_options,
-            index=0
+            index=0  # Default to "2024-25"
         )
 
         season = None if selected_season == "All Seasons" else selected_season
@@ -207,7 +206,7 @@ def main():
             with st.spinner("Training prediction model..."):
                 try:
                     # Get only the current season's games
-                    games_df = load_team_games(data_manager, "2023-24")
+                    games_df = load_team_games(data_manager, "2024-25")
 
                     if games_df is not None and len(games_df) >= 10:
                         features_df = predictor.prepare_features(games_df)
@@ -256,11 +255,14 @@ def main():
             ])
                             .collect()
                             )
-            st.dataframe(
-                recent_games,
-                use_container_width=True,
-                hide_index=True
-            )
+            if not recent_games.is_empty():
+                st.dataframe(
+                    recent_games,
+                    use_container_width=True,
+                    hide_index=True
+                )
+            else:
+                st.info("No recent games to display.")
 
     with tab3:
         st.subheader("Player Statistics")
