@@ -210,8 +210,8 @@ def display_live_game(data_manager: RaptorsDataManager):
     try:
         live_game = data_manager.get_live_game_stats()
 
-        if live_game is not None:
-            game = live_game.row(0)
+        if live_game is not None and len(live_game) > 0:
+            game = live_game.to_dicts()[0]  # Convert first row to a dictionary
 
             col1, col2, col3 = st.columns([2, 1, 2])
 
